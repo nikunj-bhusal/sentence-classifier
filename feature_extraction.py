@@ -16,7 +16,7 @@ class BagOfWord:
 
     def transform(self, sent_list):
         vocab_size = len(self.vocab)
-        bag_of_word_feature = np.zeros((len(sent_list), vocab_size))
+        bag_of_word_feature = np.zeros((len(sent_list), vocab_size), dtype=np.int8)
         for idx, sent in enumerate(sent_list):
             if self.do_lower_case:
                 sent = sent.lower()
@@ -50,7 +50,7 @@ class NGram:
     def transform(self, sentList):
         n = len(sentList)
         m = len(self.feature_map)
-        ngram_feature = np.zeros((n, m))
+        ngram_feature = np.zeros((n, m), dtype=np.int8)
         for idx, sent in enumerate(sentList):
             if self.do_lower_case:
                 sent = sent.lower()

@@ -6,19 +6,19 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 
 if __name__ == '__main__':
-    debug = 0
+    debug = 1  # Turn debug ON
     X_data, y_data = read_data()
 
     if debug == 1:
-        # Limit data to 1000 samples for faster testing while building
-        X_data = X_data[:1000]
-        y_data = y_data[:1000]
+        # Limit data to 10,000 samples to fit into standard computer memory
+        X_data = X_data[:10000]
+        y_data = y_data[:10000]
 
     y = np.array(y_data).reshape(len(y_data), 1)
 
     # 1. Feature Extraction
     bag_of_word_model = BagOfWord(do_lower_case=True)
-    ngram_model = NGram(ngram=(1, 2), do_lower_case=True)
+    ngram_model = NGram(ngram=(1,), do_lower_case=True)
     X_Bow = bag_of_word_model.fit_transform(X_data)
     X_Gram = ngram_model.fit_transform(X_data)
 
@@ -51,3 +51,39 @@ if __name__ == '__main__':
     plt.title("N-Gram Model Loss over Time")
     plt.show()
     print("Gram train accuracy: {} | test accuracy: {}".format(model2.score(X_train_Gram, y_train_Gram), model2.score(X_test_Gram, y_test_Gram)))
+
+    # 6. Real-time Inference Loop
+    print("\n" + "="*30)
+    print("AI SENTIMENT PREDICTOR")
+    print("="*30)
+
+    # Map the numerical outputs back to human-readable strings
+    sentiment_map = {
+        0: "Very Negative 😠",
+        1: "Negative 🙁",
+        2: "Neutral 😐",
+        3: "Positive 🙂",
+        4: "Very Positive 😍"
+    }
+
+    while True:
+        user_input = input("\nEnter a movie review (or type 'exit' to quit): ")
+
+        if user_input.lower() == 'exit':
+            break
+
+        # Put the single sentence into a list so the transform method can process it
+        test_phrase = [user_input]
+
+        # Step A: Transform the text into numerical features
+        # Crucial: Use .transform(), NOT .fit_transform(), so we use the training vocabulary!
+        bow_features = bag_of_word_model.transform(test_phrase)
+        gram_features = ngram_model.transform(test_phrase)
+
+        # Step B: Get predictions from both models
+        bow_prediction = model1.predict(bow_features)[0]
+        gram_prediction = model2.predict(gram_features)[0]
+
+        # Step C: Display results
+        print(f"-> BoW Model Prediction:    {sentiment_map[bow_prediction]}")
+        print(f"-> N-Gram Model Prediction: {sentiment_map[gram_prediction]}")

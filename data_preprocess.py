@@ -1,7 +1,7 @@
 import pandas as pd
 
 # def read_data(train_file="../dataset/train.tsv"):
-def read_data(train_file="train.tsv"):
+def read_data(train_file="dataset/train.tsv"):
     train_df = pd.read_csv(train_file, sep='\t')
     return train_df["Phrase"].values, train_df["Sentiment"].values
 
