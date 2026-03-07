@@ -22,7 +22,7 @@ class BagOfWord:
                 sent = sent.lower()
             words = sent.strip().split(" ")
             for word in words:
-                if word in self.vocab: # Added safety check
+                if word in self.vocab:
                     bag_of_word_feature[idx][self.vocab[word]] += 1
         return bag_of_word_feature
 
