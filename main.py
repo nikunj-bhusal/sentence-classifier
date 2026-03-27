@@ -16,9 +16,11 @@ if __name__ == '__main__':
 
     y = np.array(y_data).reshape(len(y_data), 1)
 
-    # 1. Feature Extraction
-    bag_of_word_model = BagOfWord(do_lower_case=True)
-    ngram_model = NGram(ngram=(1,), do_lower_case=True)
+    # 1. Feature Extraction (UPDATED: Removed do_lower_case arguments!)
+    bag_of_word_model = BagOfWord()
+    ngram_model = NGram(ngram=(1,))
+
+    print("Extracting features... this might take a few seconds with the new text cleaner!")
     X_Bow = bag_of_word_model.fit_transform(X_data)
     X_Gram = ngram_model.fit_transform(X_data)
 
@@ -76,7 +78,6 @@ if __name__ == '__main__':
         test_phrase = [user_input]
 
         # Step A: Transform the text into numerical features
-        # Crucial: Use .transform(), NOT .fit_transform(), so we use the training vocabulary!
         bow_features = bag_of_word_model.transform(test_phrase)
         gram_features = ngram_model.transform(test_phrase)
 
