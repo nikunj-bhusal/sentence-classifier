@@ -4,15 +4,41 @@ import nltk
 from nltk.corpus import stopwords
 from nltk.stem.porter import PorterStemmer
 
-# Ensure the stopwords are downloaded on your machine
 try:
     nltk.data.find("corpora/stopwords")
 except LookupError:
     nltk.download("stopwords", quiet=True)
 
-# Initialize these once globally so the program doesn't waste time reloading them for every sentence
 
-STOP_WORDS = set(stopwords.words("english")).union(set("ok"))
+_SENTIMENT_CRITICAL = {
+    "not",
+    "no",
+    "nor",
+    "never",
+    "nothing",
+    "nobody",
+    "nowhere",
+    "neither",
+    "very",
+    "too",
+    "so",
+    "more",
+    "most",
+    "less",
+    "least",
+    "quite",
+    "rather",
+    "really",
+    "truly",
+    "just",
+    "only",
+}
+
+_base_stopwords = set(stopwords.words("english"))
+
+
+STOP_WORDS = _base_stopwords - _SENTIMENT_CRITICAL
+
 STEMMER = PorterStemmer()
 
 
@@ -20,95 +46,128 @@ def clean_text(text):
     """
     Standardizes text by lowercasing, removing punctuation,
     removing stop words, and stemming the core words.
+    Sentiment-critical words (not, very, never, no, etc.) are intentionally
+    kept so the model can distinguish "good" from "not good".
     """
-    # 1. Lowercase the text
     text = text.lower()
-
-    # 2. Remove special characters (keep only a-z and spaces)
     text = re.sub(r"[^a-z\s]", "", text)
-
-    # 3. Tokenize (split into a list of words)
     words = text.split()
-
-    # 4. Remove Stop Words and Stem the remaining words
     cleaned_words = [STEMMER.stem(w) for w in words if w not in STOP_WORDS]
-
     return cleaned_words
 
 
+def l2_normalize(matrix):
+    """
+    L2-normalize each row so that document length doesn't dominate the
+    feature magnitude. Short and long reviews become comparable.
+    """
+    norms = np.linalg.norm(matrix, axis=1, keepdims=True)
+    norms = np.where(norms == 0, 1, norms)
+    return matrix / norms
+
+
 class BagOfWord:
-    # Added min_freq parameter (default is 3)
     def __init__(self, min_freq=3):
         self.vocab = {}
         self.min_freq = min_freq
 
     def fit(self, sent_list):
-        # Pass 1: Count frequencies of all words
         word_counts = {}
         for sent in sent_list:
-            words = clean_text(sent)
-            for word in words:
+            for word in clean_text(sent):
                 word_counts[word] = word_counts.get(word, 0) + 1
-
-        # Pass 2: Only add words to vocab if they appear >= min_freq times
         for word, count in word_counts.items():
             if count >= self.min_freq:
                 self.vocab[word] = len(self.vocab)
 
-    def transform(self, sent_list):
-        vocab_size = len(self.vocab)
-        bag_of_word_feature = np.zeros((len(sent_list), vocab_size), dtype=np.int8)
+    def transform(self, sent_list, normalize=True):
+        feat = np.zeros((len(sent_list), len(self.vocab)), dtype=np.float32)
+        for idx, sent in enumerate(sent_list):
+            for word in clean_text(sent):
+                if word in self.vocab:
+                    feat[idx][self.vocab[word]] += 1
+        return l2_normalize(feat) if normalize else feat
 
+    def fit_transform(self, sent_list, normalize=True):
+        self.fit(sent_list)
+        return self.transform(sent_list, normalize)
+
+
+class TFIDF:
+    def __init__(self, min_freq=3):
+        self.vocab = {}
+        self.idf = {}
+        self.min_freq = min_freq
+
+    def fit(self, sent_list):
+        word_counts = {}
+        for sent in sent_list:
+            for word in clean_text(sent):
+                word_counts[word] = word_counts.get(word, 0) + 1
+        for word, count in word_counts.items():
+            if count >= self.min_freq:
+                self.vocab[word] = len(self.vocab)
+
+        N = len(sent_list)
+        doc_freq = {word: 0 for word in self.vocab}
+        for sent in sent_list:
+            for word in set(clean_text(sent)):
+                if word in self.vocab:
+                    doc_freq[word] += 1
+
+        self.idf = {word: np.log(N / (df + 1)) for word, df in doc_freq.items()}
+
+    def transform(self, sent_list, normalize=True):
+        feat = np.zeros((len(sent_list), len(self.vocab)), dtype=np.float32)
         for idx, sent in enumerate(sent_list):
             words = clean_text(sent)
+            doc_len = max(len(words), 1)
+            doc_tf = {}
             for word in words:
                 if word in self.vocab:
-                    bag_of_word_feature[idx][self.vocab[word]] += 1
+                    doc_tf[word] = doc_tf.get(word, 0) + 1
+            for word, count in doc_tf.items():
+                feat[idx][self.vocab[word]] = (count / doc_len) * self.idf[word]
+        return l2_normalize(feat) if normalize else feat
 
-        return bag_of_word_feature
-
-    def fit_transform(self, sent_list):
+    def fit_transform(self, sent_list, normalize=True):
         self.fit(sent_list)
-        return self.transform(sent_list)
+        return self.transform(sent_list, normalize)
 
 
 class NGram:
-    # Added min_freq parameter
-    def __init__(self, ngram, min_freq=3):
+    def __init__(self, ngram, min_freq=3, binary=False):
         self.ngram = ngram
         self.feature_map = {}
         self.min_freq = min_freq
+        self.binary = binary
 
-    def fit(self, sentList):
-        # Pass 1: Count N-gram frequencies
+    def fit(self, sent_list):
         gram_counts = {}
-        for gram in self.ngram:
-            for sent in sentList:
+        for gram_n in self.ngram:
+            for sent in sent_list:
                 words = clean_text(sent)
-                for i in range(len(words) - gram + 1):
-                    feature = "_".join(words[i : i + gram])
+                for i in range(len(words) - gram_n + 1):
+                    feature = "_".join(words[i : i + gram_n])
                     gram_counts[feature] = gram_counts.get(feature, 0) + 1
-
-        # Pass 2: Filter by min_freq
         for feature, count in gram_counts.items():
             if count >= self.min_freq:
                 self.feature_map[feature] = len(self.feature_map)
 
-    def transform(self, sentList):
-        n = len(sentList)
-        m = len(self.feature_map)
-        ngram_feature = np.zeros((n, m), dtype=np.int8)
-
-        for idx, sent in enumerate(sentList):
+    def transform(self, sent_list, normalize=True):
+        feat = np.zeros((len(sent_list), len(self.feature_map)), dtype=np.float32)
+        for idx, sent in enumerate(sent_list):
             words = clean_text(sent)
-            for gram in self.ngram:
-                for i in range(len(words) - gram + 1):
-                    feature = "_".join(words[i : i + gram])
+            for gram_n in self.ngram:
+                for i in range(len(words) - gram_n + 1):
+                    feature = "_".join(words[i : i + gram_n])
                     if feature in self.feature_map:
-                        ngram_feature[idx][self.feature_map[feature]] = 1
+                        if self.binary:
+                            feat[idx][self.feature_map[feature]] = 1
+                        else:
+                            feat[idx][self.feature_map[feature]] += 1
+        return l2_normalize(feat) if normalize else feat
 
-        return ngram_feature
-
-    def fit_transform(self, sentList):
-        self.fit(sentList)
-        return self.transform(sentList)
+    def fit_transform(self, sent_list, normalize=True):
+        self.fit(sent_list)
+        return self.transform(sent_list, normalize)
