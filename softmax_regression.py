@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def softmax(z):
     # Numerically stable softmax: subtract the max value of each row to prevent math overflow errors
     z -= np.max(z, axis=1, keepdims=True)
@@ -7,15 +8,25 @@ def softmax(z):
     z /= np.sum(z, axis=1, keepdims=True)
     return z
 
+
 class SoftmaxRegression:
     def __init__(self):
         self.num_of_class = None  # Number of categories to predict
-        self.n = None             # Number of data samples
-        self.m = None             # Number of features (words/n-grams)
-        self.weight = None        # Model weights, shape: (num_classes, features)
-        self.learning_rate = None # How big of a step to take when learning
+        self.n = None  # Number of data samples
+        self.m = None  # Number of features (words/n-grams)
+        self.weight = None  # Model weights, shape: (num_classes, features)
+        self.learning_rate = None  # How big of a step to take when learning
 
-    def fit(self, X, y, learning_rate=0.01, epoch=10, num_of_class=5, print_loss_steps=-1, update_strategy="batch"):
+    def fit(
+        self,
+        X,
+        y,
+        learning_rate=0.01,
+        epoch=10,
+        num_of_class=5,
+        print_loss_steps=-1,
+        update_strategy="batch",
+    ):
         self.n, self.m = X.shape
         self.num_of_class = num_of_class
         self.weight = np.random.randn(self.num_of_class, self.m)
@@ -39,7 +50,11 @@ class SoftmaxRegression:
                     prob = Xi.dot(self.weight.T)
                     prob = softmax(prob).flatten()
                     loss += -np.log(prob[y[index]])
-                    self.weight += Xi.reshape(1, self.m).T.dot((y_one_hot[index] - prob).reshape(1, self.num_of_class)).T
+                    self.weight += (
+                        Xi.reshape(1, self.m)
+                        .T.dot((y_one_hot[index] - prob).reshape(1, self.num_of_class))
+                        .T
+                    )
 
             # Batch Gradient Descent: Updates weights using all samples at once
             if update_strategy == "batch":
@@ -51,7 +66,12 @@ class SoftmaxRegression:
 
                 weight_update = np.zeros_like(self.weight)
                 for i in range(self.n):
-                    weight_update += X[i].reshape(1, self.m).T.dot((y_one_hot[i] - prob[i]).reshape(1, self.num_of_class)).T
+                    weight_update += (
+                        X[i]
+                        .reshape(1, self.m)
+                        .T.dot((y_one_hot[i] - prob[i]).reshape(1, self.num_of_class))
+                        .T
+                    )
                 self.weight += weight_update * self.learning_rate / self.n
 
             loss /= self.n
