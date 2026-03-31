@@ -147,6 +147,7 @@ class TFIDF:
         self.idf = {word: np.log(N / (df + 1)) for word, df in doc_freq.items()}
 
     def transform(self, sentence_list, normalize=True):
+        # creates a matrix of zeros with rows = number of sentences and columns = vocabulary size, initially all zero.
         feat = np.zeros((len(sentence_list), len(self.vocab)), dtype=np.float32)
         for idx, sentence in enumerate(sentence_list):
             words = clean_text(sentence)

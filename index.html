@@ -1,0 +1,913 @@
+<!-- uvicorn api:app --reload --port 8000 -->
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SentiVirus</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap"
+        rel="stylesheet" />
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --bg: #0e1015;
+            --surface: #14171f;
+            --card: #191d27;
+            --border: #242836;
+            --accent: #4f72c4;
+            --accent-h: #6085d4;
+            --neg-fg: #e05d4f;
+            --neu-fg: #c9a83c;
+            --pos-fg: #4caf87;
+            --neg-bg: rgba(192, 57, 43, 0.1);
+            --neu-bg: rgba(122, 104, 40, 0.1);
+            --pos-bg: rgba(46, 125, 94, 0.1);
+            --neg-bd: rgba(192, 57, 43, 0.22);
+            --neu-bd: rgba(122, 104, 40, 0.22);
+            --pos-bd: rgba(46, 125, 94, 0.22);
+            --text: #d8dce8;
+            --muted: #5a6178;
+            --subtle: #353b50;
+            --sans: "Poppins", sans-serif;
+            --mono: "JetBrains Mono", monospace;
+            --r: 10px;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--sans);
+            font-size: 14px;
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .wrap {
+            max-width: 920px;
+            margin: 0 auto;
+            padding: 48px 24px 96px;
+        }
+
+        header {
+            margin-bottom: 40px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 26px;
+            display: flex;
+            align-items: baseline;
+            gap: 14px;
+        }
+
+        .logo {
+            font-family: var(--mono);
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .logo span {
+            color: var(--accent);
+        }
+
+        .logo-tag {
+            font-family: var(--mono);
+            font-size: 10px;
+            letter-spacing: 1.5px;
+            color: var(--muted);
+            text-transform: uppercase;
+            border: 1px solid var(--border);
+            padding: 3px 9px;
+            border-radius: 4px;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            padding: 24px 26px;
+            margin-bottom: 14px;
+        }
+
+        .section-label {
+            font-family: var(--mono);
+            font-size: 10px;
+            letter-spacing: 2px;
+            color: var(--muted);
+            text-transform: uppercase;
+            margin-bottom: 16px;
+        }
+
+        .config-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr) auto;
+            gap: 12px;
+            align-items: end;
+        }
+
+        .field label {
+            display: block;
+            font-family: var(--mono);
+            font-size: 10px;
+            letter-spacing: 1px;
+            color: var(--muted);
+            text-transform: uppercase;
+            margin-bottom: 7px;
+        }
+
+        .field input {
+            width: 100%;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-family: var(--mono);
+            font-size: 14px;
+            padding: 10px 13px;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+
+        .field input:focus {
+            border-color: var(--accent);
+        }
+
+        #trainBtn {
+            background: var(--accent);
+            color: #fff;
+            font-family: var(--mono);
+            font-size: 12px;
+            font-weight: 700;
+            border: none;
+            border-radius: 6px;
+            padding: 11px 26px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition:
+                background 0.15s,
+                opacity 0.15s;
+        }
+
+        #trainBtn:hover {
+            background: var(--accent-h);
+        }
+
+        #trainBtn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        #progressWrap {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .prog-bar-bg {
+            background: var(--surface);
+            border-radius: 99px;
+            height: 3px;
+            overflow: hidden;
+            margin-bottom: 14px;
+        }
+
+        .prog-bar-fill {
+            height: 100%;
+            background: var(--accent);
+            border-radius: 99px;
+            width: 0%;
+            transition: width 0.35s ease;
+        }
+
+        .log-box {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 12px 14px;
+            font-family: var(--mono);
+            font-size: 11px;
+            color: var(--muted);
+            max-height: 150px;
+            overflow-y: auto;
+            line-height: 1.9;
+        }
+
+        .log-box div {
+            color: #8a93b0;
+        }
+
+        #chartsSection {
+            display: none;
+        }
+
+        .charts-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        .chart-wrap {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px 18px 12px;
+        }
+
+        .chart-label {
+            font-family: var(--mono);
+            font-size: 10px;
+            letter-spacing: 1.5px;
+            color: var(--muted);
+            text-transform: uppercase;
+            margin-bottom: 12px;
+        }
+
+        canvas {
+            width: 100% !important;
+        }
+
+        .acc-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 14px;
+        }
+
+        .acc-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 14px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .acc-label {
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        .acc-values {
+            font-family: var(--mono);
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .acc-values span {
+            color: var(--text);
+        }
+
+        #predictSection {
+            display: none;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        #reviewInput {
+            flex: 1;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-family: var(--sans);
+            font-size: 14px;
+            padding: 12px 16px;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+
+        #reviewInput:focus {
+            border-color: var(--accent);
+        }
+
+        #reviewInput::placeholder {
+            color: var(--muted);
+        }
+
+        #predictBtn {
+            background: transparent;
+            border: 1px solid var(--subtle);
+            color: var(--text);
+            font-family: var(--mono);
+            font-size: 11px;
+            font-weight: 500;
+            border-radius: 6px;
+            padding: 0 22px;
+            cursor: pointer;
+            transition:
+                border-color 0.15s,
+                color 0.15s;
+            white-space: nowrap;
+        }
+
+        #predictBtn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        #resultsWrap {
+            display: none;
+            margin-top: 22px;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        .result-panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 18px 20px;
+        }
+
+        .result-panel-title {
+            font-family: var(--mono);
+            font-size: 10px;
+            letter-spacing: 2px;
+            color: var(--muted);
+            text-transform: uppercase;
+            margin-bottom: 16px;
+        }
+
+        .sbar-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .sbar-label {
+            font-family: var(--mono);
+            font-size: 11px;
+            color: var(--muted);
+            width: 64px;
+            flex-shrink: 0;
+        }
+
+        .sbar-track {
+            flex: 1;
+            height: 4px;
+            background: var(--border);
+            border-radius: 99px;
+            overflow: hidden;
+        }
+
+        .sbar-fill {
+            height: 100%;
+            border-radius: 99px;
+            transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .sbar-fill.neg {
+            background: var(--neg-fg);
+        }
+
+        .sbar-fill.neu {
+            background: var(--neu-fg);
+        }
+
+        .sbar-fill.pos {
+            background: var(--pos-fg);
+        }
+
+        .sbar-pct {
+            font-family: var(--mono);
+            font-size: 11px;
+            color: var(--text);
+            width: 40px;
+            text-align: right;
+            flex-shrink: 0;
+        }
+
+        .pred-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 14px;
+            font-family: var(--mono);
+            font-size: 11px;
+            font-weight: 700;
+            padding: 5px 12px;
+            border-radius: 4px;
+        }
+
+        .pred-badge.neg {
+            background: var(--neg-bg);
+            color: var(--neg-fg);
+            border: 1px solid var(--neg-bd);
+        }
+
+        .pred-badge.neu {
+            background: var(--neu-bg);
+            color: var(--neu-fg);
+            border: 1px solid var(--neu-bd);
+        }
+
+        .pred-badge.pos {
+            background: var(--pos-bg);
+            color: var(--pos-fg);
+            border: 1px solid var(--pos-bd);
+        }
+
+        .word-rank-wrap {
+            margin-top: 14px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 18px 20px;
+        }
+
+        .word-row-header {
+            display: grid;
+            grid-template-columns: 80px 1fr 1fr 1fr;
+            gap: 8px;
+            font-family: var(--mono);
+            font-size: 9px;
+            letter-spacing: 1.5px;
+            color: var(--muted);
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .word-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+        }
+
+        .word-row {
+            display: grid;
+            grid-template-columns: 80px 1fr 1fr 1fr;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .word-token {
+            font-family: var(--mono);
+            font-size: 11px;
+            color: var(--text);
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 3px 8px;
+            text-align: center;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .mini-bar-wrap {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .mini-bar-track {
+            flex: 1;
+            height: 4px;
+            background: var(--border);
+            border-radius: 99px;
+            overflow: hidden;
+        }
+
+        .mini-bar-fill {
+            height: 100%;
+            border-radius: 99px;
+            transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .mini-bar-fill.neg {
+            background: var(--neg-fg);
+        }
+
+        .mini-bar-fill.neu {
+            background: var(--neu-fg);
+        }
+
+        .mini-bar-fill.pos {
+            background: var(--pos-fg);
+        }
+
+        .mini-val {
+            font-family: var(--mono);
+            font-size: 10px;
+            color: var(--muted);
+            width: 44px;
+            text-align: right;
+            flex-shrink: 0;
+        }
+
+        .spin {
+            display: inline-block;
+            width: 11px;
+            height: 11px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            vertical-align: middle;
+            margin-right: 6px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(6px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 640px) {
+            .config-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .charts-row,
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .word-row {
+                grid-template-columns: 70px 1fr 1fr;
+            }
+
+            .word-row> :last-child,
+            .word-row-header> :last-child {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <header>
+            <div class="logo">Senti<span>Virus</span></div>
+            <div class="logo-tag">Sentiment Analysis</div>
+        </header>
+
+        <div class="card">
+            <div class="section-label">Configuration</div>
+            <div class="config-grid">
+                <div class="field">
+                    <label>Samples</label>
+                    <input type="number" id="cfgSamples" value="30000" min="1000" max="156000" step="1000" />
+                </div>
+                <div class="field">
+                    <label>Epochs</label>
+                    <input type="number" id="cfgEpoch" value="20" min="5" max="100" />
+                </div>
+                <div class="field">
+                    <label>Learning Rate</label>
+                    <input type="number" id="cfgLR" value="0.3" min="0.001" max="1" step="0.05" />
+                </div>
+                <button id="trainBtn" onclick="startTrain()">Train</button>
+            </div>
+
+            <div id="progressWrap">
+                <div class="prog-bar-bg">
+                    <div class="prog-bar-fill" id="progFill"></div>
+                </div>
+                <div class="log-box" id="logBox"></div>
+            </div>
+        </div>
+
+        <div id="chartsSection" class="card fade-in">
+            <div class="section-label">Training Loss</div>
+            <div class="charts-row">
+                <div class="chart-wrap">
+                    <div class="chart-label">TF-IDF Model</div>
+                    <canvas id="chart1" height="180"></canvas>
+                </div>
+                <div class="chart-wrap">
+                    <div class="chart-label">N-Gram Model</div>
+                    <canvas id="chart2" height="180"></canvas>
+                </div>
+            </div>
+            <div class="acc-grid" id="accGrid"></div>
+        </div>
+
+        <div id="predictSection" class="card fade-in">
+            <div class="section-label">Predict Sentiment</div>
+            <div class="input-row">
+                <input type="text" id="reviewInput" placeholder="Enter a movie review…"
+                    onkeydown="if (event.key === 'Enter') predict();" />
+                <button id="predictBtn" onclick="predict()">Analyze</button>
+            </div>
+
+            <div id="resultsWrap">
+                <div class="results-grid">
+                    <div class="result-panel">
+                        <div class="result-panel-title">TF-IDF Model</div>
+                        <div id="bars1"></div>
+                        <div id="badge1"></div>
+                    </div>
+                    <div class="result-panel">
+                        <div class="result-panel-title">N-Gram Model</div>
+                        <div id="bars2"></div>
+                        <div id="badge2"></div>
+                    </div>
+                </div>
+
+                <div class="word-rank-wrap">
+                    <div class="section-label" style="margin-bottom: 14px">
+                        Word Influence — TF-IDF Weights
+                    </div>
+                    <div class="word-row-header">
+                        <span>Stem</span>
+                        <span>Negative</span>
+                        <span>Neutral</span>
+                        <span>Positive</span>
+                    </div>
+                    <div class="word-grid" id="wordGrid"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <script>
+        const API = "http://localhost:8000";
+        let chart1, chart2, polling;
+
+        const NAMES = ["Negative", "Neutral", "Positive"];
+        const EMOJIS = ["🙁", "😐", "🙂"];
+        const CLS = ["neg", "neu", "pos"];
+
+        function makeChart(id) {
+            const ctx = document.getElementById(id).getContext("2d");
+            return new Chart(ctx, {
+                type: "line",
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            data: [],
+                            borderColor: "#4f72c4",
+                            backgroundColor: "#4f72c414",
+                            borderWidth: 1.5,
+                            fill: true,
+                            tension: 0.35,
+                            pointRadius: 2,
+                            pointHoverRadius: 4,
+                            pointBackgroundColor: "#4f72c4",
+                        },
+                    ],
+                },
+                options: {
+                    animation: false,
+                    responsive: true,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: { label: (c) => `loss: ${c.parsed.y.toFixed(4)}` },
+                        },
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: "#242836" },
+                            ticks: {
+                                color: "#5a6178",
+                                font: { family: "JetBrains Mono", size: 10 },
+                                maxTicksLimit: 8,
+                            },
+                            title: {
+                                display: true,
+                                text: "epoch",
+                                color: "#5a6178",
+                                font: { family: "JetBrains Mono", size: 10 },
+                            },
+                        },
+                        y: {
+                            grid: { color: "#242836" },
+                            ticks: {
+                                color: "#5a6178",
+                                font: { family: "JetBrains Mono", size: 10 },
+                                maxTicksLimit: 6,
+                            },
+                            title: {
+                                display: true,
+                                text: "loss",
+                                color: "#5a6178",
+                                font: { family: "JetBrains Mono", size: 10 },
+                            },
+                        },
+                    },
+                },
+            });
+        }
+
+        function updateChart(chart, arr) {
+            chart.data.labels = arr.map((_, i) => i + 1);
+            chart.data.datasets[0].data = arr;
+            chart.update("none");
+        }
+
+        async function startTrain() {
+            const btn = document.getElementById("trainBtn");
+            const samples = parseInt(document.getElementById("cfgSamples").value);
+            const epoch = parseInt(document.getElementById("cfgEpoch").value);
+            const lr = parseFloat(document.getElementById("cfgLR").value);
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spin"></span>Training…';
+
+            document.getElementById("progressWrap").style.display = "block";
+            document.getElementById("chartsSection").style.display = "none";
+            document.getElementById("predictSection").style.display = "none";
+            document.getElementById("resultsWrap").style.display = "none";
+
+            if (chart1) chart1.destroy();
+            if (chart2) chart2.destroy();
+            chart1 = makeChart("chart1");
+            chart2 = makeChart("chart2");
+
+            try {
+                await fetch(`${API}/train`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ n_samples: samples, epoch, lr }),
+                });
+            } catch {
+                alert("Cannot reach backend.\nRun: uvicorn api:app --port 8000");
+                btn.disabled = false;
+                btn.innerHTML = "Train";
+                return;
+            }
+
+            if (polling) clearInterval(polling);
+            polling = setInterval(pollStatus, 800);
+        }
+
+        async function pollStatus() {
+            let data;
+            try {
+                data = await fetch(`${API}/status`).then((r) => r.json());
+            } catch {
+                return;
+            }
+
+            document.getElementById("progFill").style.width = data.progress + "%";
+
+            const logBox = document.getElementById("logBox");
+            logBox.innerHTML = data.log.map((l) => `<div>${l}</div>`).join("");
+            logBox.scrollTop = logBox.scrollHeight;
+
+            if (data.loss_history?.tfidf) {
+                updateChart(chart1, data.loss_history.tfidf);
+                updateChart(chart2, data.loss_history.ngram);
+                document.getElementById("chartsSection").style.display = "block";
+            }
+
+            if (data.status === "done") {
+                clearInterval(polling);
+                const btn = document.getElementById("trainBtn");
+                btn.disabled = false;
+                btn.innerHTML = "Train Again";
+
+                document.getElementById("accGrid").innerHTML = `
+      <div class="acc-card">
+        <span class="acc-label">TF-IDF Accuracy</span>
+        <div class="acc-values">train <span>${(data.train_acc.tfidf * 100).toFixed(1)}%</span>&ensp;test <span>${(data.test_acc.tfidf * 100).toFixed(1)}%</span></div>
+      </div>
+      <div class="acc-card">
+        <span class="acc-label">N-Gram Accuracy</span>
+        <div class="acc-values">train <span>${(data.train_acc.ngram * 100).toFixed(1)}%</span>&ensp;test <span>${(data.test_acc.ngram * 100).toFixed(1)}%</span></div>
+      </div>`;
+
+                document.getElementById("predictSection").style.display = "block";
+            }
+
+            if (data.status === "error") {
+                clearInterval(polling);
+                const btn = document.getElementById("trainBtn");
+                btn.disabled = false;
+                btn.innerHTML = "Train";
+                alert("Training error: " + data.error);
+            }
+        }
+
+        async function predict() {
+            const text = document.getElementById("reviewInput").value.trim();
+            if (!text) return;
+
+            const btn = document.getElementById("predictBtn");
+            btn.innerHTML = '<span class="spin"></span>';
+
+            let data;
+            try {
+                data = await fetch(`${API}/predict`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ text }),
+                }).then((r) => r.json());
+            } catch (e) {
+                alert("Predict failed: " + e.message);
+                btn.innerHTML = "Analyze";
+                return;
+            }
+
+            btn.innerHTML = "Analyze";
+            if (data.error) {
+                alert(data.error);
+                return;
+            }
+
+            renderBars("bars1", "badge1", data.tfidf.proba, data.tfidf.pred);
+            renderBars("bars2", "badge2", data.ngram.proba, data.ngram.pred);
+            renderWords(data.word_scores);
+
+            const rw = document.getElementById("resultsWrap");
+            rw.style.display = "block";
+            rw.classList.remove("fade-in");
+            void rw.offsetWidth;
+            rw.classList.add("fade-in");
+        }
+
+        function renderBars(barsId, badgeId, proba, pred) {
+            document.getElementById(barsId).innerHTML = NAMES.map(
+                (name, i) => `
+    <div class="sbar-row">
+      <div class="sbar-label">${name}</div>
+      <div class="sbar-track">
+        <div class="sbar-fill ${CLS[i]}" style="width:${(proba[i] * 100).toFixed(1)}%"></div>
+      </div>
+      <div class="sbar-pct">${(proba[i] * 100).toFixed(1)}%</div>
+    </div>`,
+            ).join("");
+
+            document.getElementById(badgeId).innerHTML =
+                `<div class="pred-badge ${CLS[pred]}">${EMOJIS[pred]} ${NAMES[pred]}</div>`;
+        }
+
+        function renderWords(wordScores) {
+            const grid = document.getElementById("wordGrid");
+            if (!wordScores?.length) {
+                grid.innerHTML =
+                    '<div style="color:var(--muted);font-family:var(--mono);font-size:11px">No vocabulary matches found.</div>';
+                return;
+            }
+
+            const maxVal = Math.max(
+                ...wordScores.flatMap((ws) => ws.scores.map(Math.abs)),
+                0.001,
+            );
+
+            grid.innerHTML = wordScores
+                .map((ws) => {
+                    const bars = ws.scores
+                        .map((s, i) => {
+                            const pct = (Math.abs(s) / maxVal) * 100;
+                            const sign = s >= 0 ? "+" : "−";
+                            return `<div class="mini-bar-wrap">
+        <div class="mini-bar-track">
+          <div class="mini-bar-fill ${CLS[i]}" style="width:${pct.toFixed(1)}%"></div>
+        </div>
+        <div class="mini-val">${sign}${Math.abs(s).toFixed(3)}</div>
+      </div>`;
+                        })
+                        .join("");
+
+                    return `<div class="word-row">
+      <div class="word-token">${ws.word}</div>
+      ${bars}
+    </div>`;
+                })
+                .join("");
+        }
+    </script>
+</body>
+
+</html>
