@@ -64,7 +64,6 @@ class SoftmaxRegression:
         epoch=30,
         num_of_class=3,
         print_loss_steps=5,
-        update_strategy="mini_batch",
         lambda_reg=0.001,
         batch_size=256,
         lr_decay=0.98,
@@ -99,47 +98,30 @@ class SoftmaxRegression:
             rand_index = np.random.permutation(self.n)
             epoch_loss = 0.0
 
-            if update_strategy == "stochastic":
-                for index in rand_index:
-                    Xi = _row_slice(X, [index])
-                    prob = softmax(_dot(Xi, self.weight.T)).flatten()
-                    c = y_flat[index]
-                    epoch_loss += class_weights[c] * -np.log(prob[c] + 1e-15)
+            for start in range(0, self.n, batch_size):
+                idx = rand_index[start : start + batch_size]
+                Xi = _row_slice(X, idx)
+                yi = y_flat[idx]
+                yi_oh = y_one_hot[idx]
 
-                    grad = class_weights[c] * (y_one_hot[index] - prob)
+                prob = softmax(_dot(Xi, self.weight.T))
 
-                    if issparse(Xi):
-                        weight_update = np.outer(grad, Xi.toarray().flatten())
-                    else:
-                        weight_update = np.outer(grad, Xi.flatten())
-                    self.weight += current_lr * weight_update
-                    self.weight[:, 1:] *= 1.0 - current_lr * lambda_reg
+                sample_weights = class_weights[yi]
+                correct_probs = prob[np.arange(len(idx)), yi]
+                epoch_loss += float(
+                    np.sum(sample_weights * -np.log(correct_probs + 1e-15))
+                )
 
-            elif update_strategy == "mini_batch":
-                for start in range(0, self.n, batch_size):
-                    idx = rand_index[start : start + batch_size]
-                    Xi = _row_slice(X, idx)
-                    yi = y_flat[idx]
-                    yi_oh = y_one_hot[idx]
+                grad = (yi_oh - prob) * sample_weights[:, None]
+                grad /= len(idx)
 
-                    prob = softmax(_dot(Xi, self.weight.T))
+                if issparse(Xi):
+                    weight_update = np.asarray(grad.T.dot(Xi.toarray()))
+                else:
+                    weight_update = grad.T.dot(Xi)
 
-                    sample_weights = class_weights[yi]
-                    correct_probs = prob[np.arange(len(idx)), yi]
-                    epoch_loss += float(
-                        np.sum(sample_weights * -np.log(correct_probs + 1e-15))
-                    )
-
-                    grad = (yi_oh - prob) * sample_weights[:, None]
-                    grad /= len(idx)
-
-                    if issparse(Xi):
-                        weight_update = np.asarray(grad.T.dot(Xi.toarray()))
-                    else:
-                        weight_update = grad.T.dot(Xi)
-
-                    self.weight += current_lr * weight_update
-                    self.weight[:, 1:] *= 1.0 - current_lr * lambda_reg
+                self.weight += current_lr * weight_update
+                self.weight[:, 1:] *= 1.0 - current_lr * lambda_reg
 
             current_lr *= lr_decay
 
